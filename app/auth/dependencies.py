@@ -4,11 +4,13 @@ from datetime import timedelta, timezone, datetime
 from typing import Optional
 
 import bcrypt
+from bson import ObjectId
 from jose import jwt, JWTError
 from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 
+from app.auth.config import auth_settings
 from app.database import mongodb
 
 pwd_context = CryptContext(
@@ -17,12 +19,13 @@ pwd_context = CryptContext(
 )
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ALGORITHM = auth_settings.ALGORITHM
 
 
 async def valid_user_id(id: str)->bool:
-    print(id)
-    user = await mongodb.db.users.find_one({"_id": id})
+    user = await mongodb.db.users.find_one({"_id": ObjectId(id)})
+    print(user)
+
     if user:
         return True
     else:
@@ -50,9 +53,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
     expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=int(os.getenv("ACCESS_TOKEN_EXPIRES_MINUTES"),))
+        expires_delta or timedelta(minutes=int(auth_settings.ACCESS_TOKEN_EXPIRES_MINUTES,))
     )
-    return jwt.encode({"sub": subject, "exp": expire}, os.getenv("SECRET_KEY"), algorithm=ALGORITHM)
+    return jwt.encode({"sub": subject, "exp": expire}, auth_settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -62,7 +65,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        secret_key = os.getenv("SECRET_KEY", "your-super-secret-key-for-dev")
+        secret_key = auth_settings.SECRET_KEY
         payload = jwt.decode(token, secret_key, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:

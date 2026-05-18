@@ -7,11 +7,6 @@ from pydantic import BaseModel, ConfigDict, field_serializer, Field
 
 
 class CustomModel(BaseModel):
-    id: Optional[str] = Field(
-        default=None,
-        alias="_id"
-    )
-
     model_config = ConfigDict(populate_by_name=True)
     create_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(

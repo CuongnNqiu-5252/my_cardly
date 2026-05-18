@@ -11,3 +11,4 @@ class CardNotFound(AppException):
             message=message,
             error_code="NOT_FOUND"
         )
+
